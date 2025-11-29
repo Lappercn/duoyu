@@ -19,6 +19,8 @@ const container = ref(null)
 let scene, camera, renderer, model, mixer, clock
 let actions = {} // store animations
 let activeAction = null
+let basePosition = new THREE.Vector3() // Store initial position
+const speakingStartTime = ref(0)
 
 const initScene = () => {
     if (!container.value) return
@@ -67,6 +69,9 @@ const loadModel = () => {
     model.position.x = -center.x * scale
     model.position.y = -center.y * scale - 0.8 // Adjusted down even more
     model.position.z = -center.z * scale
+    
+    // Store base position for animation offsets
+    basePosition.copy(model.position)
     
     // Fix Rotation (Rotate -90 degrees to face front if model is side-facing)
     model.rotation.y = -Math.PI / 2;
@@ -137,11 +142,50 @@ const updateAnimation = () => {
 const animate = () => {
     requestAnimationFrame(animate)
     if (mixer) mixer.update(clock.getDelta())
+    
+    // Add Procedural Animation (Sway/Breathing)
+    if (model) {
+        const time = clock.getElapsedTime();
+        
+        // 1. Breathing (Up/Down) - Always active but subtle
+        // Use basePosition.y to prevent drift
+        model.position.y = basePosition.y + Math.sin(time * 1.5) * 0.02;
+        
+        if (props.status === 'speaking') {
+            const speakTime = clock.getElapsedTime() - speakingStartTime.value;
+            
+            // 2. Speaking Sway (Left/Right Rotation)
+            // Damped sine wave: fades out after ~2 seconds
+            // e^(-t*1.5) makes it decay quickly
+            const dampFactor = Math.max(0, Math.exp(-speakTime * 1.5));
+            // Sway: Speed 5, Amp 0.25 (initial) -> 0
+            const sway = Math.sin(speakTime * 5) * 0.25 * dampFactor;
+            
+            model.rotation.y = -Math.PI / 2 + sway;
+            
+            // 3. Forward Tilt (Z axis)
+            // Static lean offset + slight oscillation
+            // Increased lean offset to 0.15 (was ~0.05 oscillation only)
+            // Keep breathing oscillation but smaller
+            const leanOffset = 0.15; 
+            const leanBreath = Math.sin(time * 2.5) * 0.03;
+            model.rotation.z = leanOffset + leanBreath;
+            
+        } else {
+            // 3. Idle Sway (Very subtle)
+            model.rotation.y = -Math.PI / 2 + Math.sin(time * 0.5) * 0.05;
+            model.rotation.z = 0; // Reset lean
+        }
+    }
+
     if (renderer && scene && camera) renderer.render(scene, camera)
 }
 
 watch(() => props.status, (newVal) => {
     updateAnimation()
+    if (newVal === 'speaking') {
+        speakingStartTime.value = clock.getElapsedTime()
+    }
 })
 
 onMounted(() => {

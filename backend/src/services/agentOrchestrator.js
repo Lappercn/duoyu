@@ -1,5 +1,6 @@
 const AnalysisRecord = require('../models/AnalysisRecord');
 const llmService = require('./llmService');
+const bochaService = require('./bochaService');
 
 class AgentOrchestrator {
   async startAnalysis(recordId) {
@@ -13,8 +14,67 @@ class AgentOrchestrator {
 
       // --- Phase 1: Consultant (Data Mining) ---
       console.log('Phase 1: Consultant Agent working...');
-      const consultantSystemPrompt = process.env.PROMPT_CONSULTANT || "You are a professional financial consultant. Summarize the latest market data.";
-      const userQuery = `请检索股票代码 ${record.stockCode} 的最新信息。`;
+      
+      // Step 1: Generate Search Plan
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+      
+      const planningPrompt = `
+      你是一名专业的金融情报搜集官。
+      目标：搜集股票 ${record.stockCode} 在 ${dateStr} 的核心情报，用于后续的投资辩论。
+      请生成 3 个关键的搜索引擎查询词，覆盖以下维度：
+      1. 实时股价与今日盘面表现。
+      2. 最近一周的重大利好/利空新闻。
+      3. 市场情绪与机构评级。
+      
+      请直接返回 JSON 字符串数组，例如：["${record.stockCode} 实时股价", "${record.stockCode} 最新研报", "${record.stockCode} 重大新闻"]
+      `;
+      
+      let searchQueries = [`${dateStr} ${record.stockCode} 股票最新价格`, `${record.stockCode} 最新新闻`];
+      try {
+          const planResponse = await llmService.call([
+              { role: 'system', content: 'You are a JSON generator.' },
+              { role: 'user', content: planningPrompt }
+          ]);
+          
+          const match = planResponse.match(/\[.*\]/s);
+          if (match) {
+              const parsed = JSON.parse(match[0]);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                  // Add date to each query to ensure freshness
+                  searchQueries = parsed.map(q => q.includes(dateStr) ? q : `${dateStr} ${q}`);
+              }
+          }
+      } catch (e) {
+          console.warn('Failed to parse search queries, using defaults.', e.message);
+      }
+
+      // Step 2: Execute Searches
+      console.log('Executing search queries:', searchQueries);
+      // Limit to 3 queries to save API calls and time
+      const limitedQueries = searchQueries.slice(0, 3);
+      const searchPromises = limitedQueries.map(q => bochaService.searchStockInfo(q));
+      const searchResults = await Promise.all(searchPromises);
+      
+      // Step 3: Aggregate Results
+      let aggregatedInfo = "";
+      searchResults.forEach((result, index) => {
+          aggregatedInfo += `\n=== 搜索结果 ${index + 1} (关键词: ${limitedQueries[index]}) ===\n`;
+          aggregatedInfo += bochaService.formatForLLM(result);
+      });
+      
+      const consultantSystemPrompt = process.env.PROMPT_CONSULTANT || "You are a professional financial consultant. Summarize the latest market data based on the provided real-time information.";
+      const userQuery = `请根据以下全网搜集到的多维度数据，整理一份关于股票 ${record.stockCode} 的深度市场情报报告。
+      
+      报告要求：
+      1. 包含核心行情数据（最新价、涨跌幅）。
+      2. 提炼关键新闻摘要。
+      3. 分析市场情绪。
+      4. 为接下来的“多空辩论”提供数据支撑。
+
+      搜集到的数据：
+      ${aggregatedInfo.slice(0, 30000)}
+      `;
       
       record.consultantOutput = {
           marketInfoSummary: '',
@@ -28,7 +88,7 @@ class AgentOrchestrator {
             { role: 'system', content: consultantSystemPrompt },
             { role: 'user', content: userQuery }
         ], 
-        [{ type: 'web_search' }],
+        [], // No need for internal web_search tool anymore
         async (chunk) => {
             record.consultantOutput.marketInfoSummary += chunk;
             if (Date.now() - lastSave > 500) {
@@ -40,6 +100,8 @@ class AgentOrchestrator {
       
       record.consultantOutput.marketInfoSummary = consultantOutputRaw; 
       try {
+          // Try to parse scores if LLM generates them (or we could ask LLM to generate them specifically)
+          // For now, we keep the regex check
           const jsonMatch = consultantOutputRaw.match(/```json\s*(\{[\s\S]*?\})\s*```/) || consultantOutputRaw.match(/(\{[\s\S]*"scores"[\s\S]*\})/);
           if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[1]);

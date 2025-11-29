@@ -55,22 +55,30 @@
       <div class="agents-circle" :class="{ 'timeline-active': store.revealedTranscript.length > 0 }">
         <!-- Consultant (Top Left) -->
         <div class="agent-position pos-consultant" ref="agentConsultant" :class="{ active: store.activeSpeaker === 'consultant' }">
-          <AgentAvatar role="consultant" :status="getAgentStatus('consultant')" />
+          <div class="agent-inner-wrapper">
+            <AgentAvatar role="consultant" :status="getAgentStatus('consultant')" />
+          </div>
         </div>
 
         <!-- Bull (Left) -->
         <div class="agent-position pos-bull" ref="agentBull" :class="{ active: store.activeSpeaker === 'bull' }">
-          <AgentAvatar role="bull" :status="getAgentStatus('bull')" />
+          <div class="agent-inner-wrapper">
+            <AgentAvatar role="bull" :status="getAgentStatus('bull')" />
+          </div>
         </div>
 
         <!-- Host (Center Top) -->
         <div class="agent-position pos-host" ref="agentHost" :class="{ active: store.activeSpeaker === 'host' }">
-          <AgentAvatar role="host" :status="getAgentStatus('host')" />
+          <div class="agent-inner-wrapper">
+            <AgentAvatar role="host" :status="getAgentStatus('host')" />
+          </div>
         </div>
 
         <!-- Bear (Right) -->
         <div class="agent-position pos-bear" ref="agentBear" :class="{ active: store.activeSpeaker === 'bear' }">
-          <AgentAvatar role="bear" :status="getAgentStatus('bear')" />
+          <div class="agent-inner-wrapper">
+            <AgentAvatar role="bear" :status="getAgentStatus('bear')" />
+          </div>
         </div>
 
       </div>
@@ -79,7 +87,8 @@
       <div class="verdict-overlay" v-if="store.showVerdictModal && store.finalResult">
         <div class="verdict-card">
           <h2>最终建议: <span :class="verdictClass">{{ store.finalResult.decision }}</span></h2>
-          <p class="reasoning">{{ store.finalResult.reasoning }}</p>
+          <!-- Render markdown for verdict reasoning too -->
+          <div class="reasoning markdown-body" v-html="renderMarkdown(store.finalResult.reasoning)"></div>
           <div class="btn-group">
              <el-button type="success" @click="showReport = true">生成投资报告</el-button>
              <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
@@ -249,7 +258,7 @@ watch(() => store.userConfirmed, (newVal) => {
 })
 
 // Watch for Final Result to trigger Verdict
-watch(() => store.finalResult, (newVal) => {
+watch(() => store.isFinalStage, (newVal) => {
     if (newVal) {
         nextTick(() => {
              // Bull and Bear Exit
@@ -307,10 +316,27 @@ onMounted(() => {
 .stage-container {
   height: 100vh;
   width: 100vw;
-  background: radial-gradient(circle at center, #2b3044 0%, #1a1c2c 100%);
+  background-image: url('https://plus.unsplash.com/premium_photo-1681487769650-a0c3fbaed85a?q=80&w=2155&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   overflow: hidden;
   position: relative;
+}
+
+/* Add a dark overlay to ensure content visibility */
+.stage-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 28, 44, 0.85); /* Dark blue-ish overlay */
+    z-index: 0;
+}
+
+/* Ensure content sits above the overlay */
+.dashboard-panel, .stage-area {
+    z-index: 1;
 }
 
 .dashboard-panel {
@@ -353,11 +379,20 @@ onMounted(() => {
   height: 600px;
 }
 
-/* Active Speaker Highlight */
+/* Active Speaker Highlight - Floating Effect */
 .agent-position.active {
   z-index: 100;
   filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
 }
+
+/* Specific override for Bull/Bear who might have different base transforms */
+/* But we defined their base pos as transform: translateX(-50%); so this keyframe works for all centered agents. */
+
+.agent-position.active .agent-inner-wrapper {
+    /* Removed CSS sway as we are moving to internal 3D model animation */
+}
+
+
 
 /* Inactive Speaker Dimming */
 .agent-position:not(.active) {
@@ -684,9 +719,29 @@ onMounted(() => {
     line-height: 1.6;
     opacity: 0.9;
     margin-bottom: 2rem;
-    white-space: pre-wrap;
-    max-height: 40vh;
+    text-align: left; /* Align left for markdown */
+    max-height: 50vh; /* Increased height */
     overflow-y: auto;
+    padding: 10px; /* Add padding for scrollbar spacing */
+}
+
+/* Markdown Styles within Verdict Card */
+.reasoning :deep(strong) {
+    color: #FFD700;
+    font-weight: bold;
+}
+
+.reasoning :deep(p) {
+    margin-bottom: 10px;
+}
+
+.reasoning :deep(ul), .reasoning :deep(ol) {
+    padding-left: 20px;
+    margin-bottom: 10px;
+}
+
+.reasoning :deep(li) {
+    margin-bottom: 5px;
 }
 
 .text-red { color: #F56C6C; text-shadow: 0 0 10px rgba(245, 108, 108, 0.5); }

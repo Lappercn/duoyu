@@ -11,7 +11,7 @@
         <div class="decision-box" :class="data.decision">
           {{ data.decision === 'BUY' ? '强烈买入' : data.decision === 'SELL' ? '建议卖出' : '观望持有' }}
         </div>
-        <p class="reasoning">{{ data.reasoning }}</p>
+        <div class="reasoning markdown-body" v-html="renderedReasoning"></div>
       </div>
 
       <div class="section">
@@ -36,8 +36,15 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { marked } from 'marked'
+
+const props = defineProps({
   data: Object
+})
+
+const renderedReasoning = computed(() => {
+  return marked(props.data.reasoning || '')
 })
 
 const printReport = () => {
@@ -65,11 +72,14 @@ const printReport = () => {
   color: #2c3e50;
   width: 210mm; /* A4 width */
   min-height: 297mm;
+  max-height: 90vh; /* Limit height to viewport */
+  overflow-y: auto; /* Internal scroll */
   padding: 25mm;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
   margin-bottom: 20px;
   font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
   position: relative;
+  box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 /* Watermark-like decoration */
@@ -158,14 +168,54 @@ const printReport = () => {
 }
 
 .reasoning { 
-    line-height: 2; 
-    text-align: justify; 
+    line-height: 1.8; 
+    text-align: left; 
     font-size: 16px;
     color: #2c3e50;
     background: #f8f9fa;
-    padding: 20px;
+    padding: 30px;
     border-radius: 8px;
     border: 1px solid #eee;
+}
+
+/* Markdown Styles */
+.markdown-body :deep(h3) {
+    font-size: 18px;
+    color: #1a1c2c;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    border-left: 4px solid #4a90e2;
+    padding-left: 10px;
+}
+
+.markdown-body :deep(p) {
+    margin-bottom: 15px;
+    text-align: justify;
+}
+
+.markdown-body :deep(ul), .markdown-body :deep(ol) {
+    margin-bottom: 20px;
+    padding-left: 20px;
+}
+
+.markdown-body :deep(li) {
+    margin-bottom: 8px;
+}
+
+.markdown-body :deep(strong) {
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+.markdown-body :deep(blockquote) {
+    border-left: 4px solid #bdc3c7;
+    padding-left: 15px;
+    color: #7f8c8d;
+    background: rgba(0,0,0,0.02);
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 20px 0;
 }
 
 .debate-summary p {
