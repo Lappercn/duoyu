@@ -20,7 +20,7 @@ ENV_FILE="$BACKEND_DIR/.env"
 OLD_SITE_DIR="/root/project/tongzhilian/doc/.vitepress/dist"
 
 # 证书目录 (请确认此路径正确)
-SSL_DIR="/root/project/tongzhilian/nginx/ssl" 
+SSL_DIR="/data/nginx/ssl" 
 
 # 容器名称
 NGINX_CONTAINER="nginx"
