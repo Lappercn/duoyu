@@ -44,6 +44,12 @@ if [ -f "$ENV_FILE" ]; then
     MONGO_URI_ORIGIN=$(grep "^MONGO_URI=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
     DOUBAO_API_KEY=$(grep "^DOUBAO_API_KEY=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
     DOUBAO_MODEL_VERSION=$(grep "^DOUBAO_MODEL_VERSION=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+
+    # TTS Config
+    TTS_APPID=$(grep "^TTS_APPID=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+    TTS_ACCESS_TOKEN=$(grep "^TTS_ACCESS_TOKEN=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+    TTS_CLUSTER=$(grep "^TTS_CLUSTER=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
+    TTS_SECRET_KEY=$(grep "^TTS_SECRET_KEY=" "$ENV_FILE" | cut -d'=' -f2- | tr -d '\r' | tr -d '"' | tr -d "'")
     
     # 强制使用 Docker 内部网络连接 MongoDB
     # 如果原来的配置里有用户名密码，需要保留；这里简化处理，假设是标准 mongodb://...
@@ -163,6 +169,10 @@ if [ -d "$BACKEND_DIR" ]; then
         -e MONGO_URI="$MONGO_URI" \
         -e DOUBAO_API_KEY="$DOUBAO_API_KEY" \
         -e DOUBAO_MODEL_VERSION="$DOUBAO_MODEL_VERSION" \
+        -e TTS_APPID="$TTS_APPID" \
+        -e TTS_ACCESS_TOKEN="$TTS_ACCESS_TOKEN" \
+        -e TTS_CLUSTER="$TTS_CLUSTER" \
+        -e TTS_SECRET_KEY="$TTS_SECRET_KEY" \
         node:20-alpine sh -c "
             npm install && 
             npm start

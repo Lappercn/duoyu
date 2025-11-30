@@ -6,11 +6,11 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 class TTSService {
   constructor() {
-    this.appId = '6806274217';
-    this.accessToken = 'iKGzuw81fnOBOjkAqh7hh3i6YJ7QJqav';
-    this.secretKey = 'i7N-dDnXTdwzg-SsgR_TGSWLm3nksgq1'; // New Secret Key
+    this.appId = process.env.TTS_APPID || '6806274217';
+    this.accessToken = process.env.TTS_ACCESS_TOKEN || 'iKGzuw81fnOBOjkAqh7hh3i6YJ7QJqav';
+    this.secretKey = process.env.TTS_SECRET_KEY || 'i7N-dDnXTdwzg-SsgR_TGSWLm3nksgq1'; // New Secret Key
     this.apiUrl = 'https://openspeech.bytedance.com/api/v1/tts';
-    this.cluster = 'volcano_tts'; 
+    this.cluster = process.env.TTS_CLUSTER || 'volcano_tts'; 
   }
 
   async generateAudio(text, voiceType, retryCount = 0) {
@@ -64,14 +64,14 @@ class TTSService {
       if (response.data && response.data.code !== 3000 && response.data.code !== undefined) {
            // If code exists and is not 3000 (Success), treat as error
            // Check specifically for rate limit codes if known, otherwise generic retry
-           console.warn(`TTS API Logic Error (Attempt ${retryCount + 1}):`, response.data);
-           throw { response: { status: 429, data: response.data } }; // Simulate 429 to trigger retry logic below
+           console.warn(`TTS API Logic Error (Attempt ${retryCount + 1}):`, JSON.stringify(response.data));
+           throw { response: { status: 400, data: response.data } }; 
       }
 
       if (response.data && response.data.data) {
         return response.data.data; // Base64 string
       } else {
-        console.error('TTS API Error: No data received', response.data);
+        console.error('TTS API Error: No data received', JSON.stringify(response.data));
         throw new Error('TTS Generation Failed: No data');
       }
     } catch (error) {
@@ -88,7 +88,12 @@ class TTSService {
         }
       }
 
-      console.error('TTS Service Error:', error.message);
+      console.error('TTS Service Error Details:', {
+        message: error.message,
+        responseStatus: error.response?.status,
+        responseData: error.response?.data,
+        stack: error.stack
+      });
       throw error;
     }
   }

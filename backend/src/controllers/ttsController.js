@@ -29,8 +29,13 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('TTS Controller Error:', err.message);
-    res.status(500).send('TTS Server Error');
+    console.error('TTS Controller Error:', err);
+    const errorMessage = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+    res.status(500).json({ 
+      code: 500, 
+      message: 'TTS Server Error', 
+      error: errorMessage 
+    });
   }
 });
 
