@@ -39,17 +39,20 @@ const use3D = computed(() => {
 })
 
 const modelPath = computed(() => {
+  // 使用 import.meta.env.BASE_URL 确保在子路径部署时能正确加载
+  const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL.slice(0, -1) : import.meta.env.BASE_URL
+  
   if (props.role === 'consultant') {
-    return '/agents/consultant/金融分析师.glb'
+    return `${base}/agents/consultant/金融分析师.glb`
   }
   if (props.role === 'bull') {
-    return '/agents/bull/牛市 激进决策者.glb'
+    return `${base}/agents/bull/牛市 激进决策者.glb`
   }
   if (props.role === 'bear') {
-    return '/agents/bear/熊市 稳健风险管控者.glb'
+    return `${base}/agents/bear/熊市 稳健风险管控者.glb`
   }
   if (props.role === 'host') {
-    return '/agents/host/主持人 最终决策者.glb'
+    return `${base}/agents/host/主持人 最终决策者.glb`
   }
   return ''
 })
