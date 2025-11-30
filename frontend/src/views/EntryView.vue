@@ -6,7 +6,7 @@
     <div class="bg-overlay"></div>
 
     <div class="content-wrapper">
-      <h1 class="title">多鱼理财 · 多智能体投顾</h1>
+      <h1 class="title">多鱼理财 · 多智能体专家团队</h1>
       <p class="subtitle">AI Agent Investment Advisor</p>
       
       <div class="search-bar-container">
@@ -14,7 +14,7 @@
           <input 
             v-model="form.stockCode" 
             type="text" 
-            placeholder="输入股票名称或代码 (如: 茅台 / 600519)" 
+            placeholder="输入股票名称或代码 (如: 股票名称/股票代码 )" 
             class="search-input"
             @keyup.enter="handleSubmit"
           />
