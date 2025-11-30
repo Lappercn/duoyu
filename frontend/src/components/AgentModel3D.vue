@@ -1,6 +1,10 @@
 <template>
   <div class="model-container" ref="container">
-      <!-- Model loaded by Three.js -->
+      <!-- Loading Overlay -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">{{ loadingProgress }}%</div>
+      </div>
   </div>
 </template>
 
@@ -8,7 +12,7 @@
 import { onMounted, ref, watch, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 
 const props = defineProps({
   modelPath: String,
@@ -16,6 +20,8 @@ const props = defineProps({
 })
 
 const container = ref(null)
+const isLoading = ref(true)
+const loadingProgress = ref(0)
 let scene, camera, renderer, model, mixer, clock
 let actions = {} // store animations
 let activeAction = null
@@ -53,8 +59,20 @@ const initScene = () => {
 }
 
 const loadModel = () => {
+    isLoading.value = true
     const loader = new GLTFLoader()
+    
+    // Configure Draco Loader for compressed models
+    const dracoLoader = new DRACOLoader()
+    // Use local decoder files from public/draco/
+    // Ensure path ends with /
+    const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : import.meta.env.BASE_URL + '/'
+    dracoLoader.setDecoderPath(`${base}draco/`)
+    dracoLoader.setDecoderConfig({ type: 'js' })
+    loader.setDRACOLoader(dracoLoader)
+
     loader.load(props.modelPath, (gltf) => {
+        isLoading.value = false
         model = gltf.scene
         
         // Center and Scale
@@ -95,6 +113,13 @@ const loadModel = () => {
             
             updateAnimation()
         }
+    }, (xhr) => {
+        if (xhr.total > 0) {
+            loadingProgress.value = Math.round((xhr.loaded / xhr.total) * 100)
+        }
+    }, (error) => {
+        console.error('Model Load Error:', error)
+        isLoading.value = false
     })
 }
 
@@ -203,7 +228,46 @@ onUnmounted(() => {
 
 <style scoped>
 .model-container {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+.loading-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
