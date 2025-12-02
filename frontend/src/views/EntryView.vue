@@ -6,7 +6,7 @@
     <div class="bg-overlay"></div>
 
     <div class="content-wrapper">
-      <h1 class="title">多鱼理财 · 多智能体专家团队</h1>
+      <h1 class="title">多鱼投资 · 多智能体专家团队</h1>
       <p class="subtitle">AI Agent Investment Advisor</p>
       
       <div class="search-bar-container">
