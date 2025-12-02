@@ -98,6 +98,20 @@ if [ ! -d "$SSL_DIR" ]; then
     echo "!!! Nginx 可能无法启动。请修改脚本中的 SSL_DIR 变量。"
 fi
 
+# 检查旧业务目录是否存在且包含入口文件
+if [ -d "$OLD_SITE_DIR" ]; then
+    echo "    正在检查旧业务目录权限..."
+    # 尝试放开权限，确保 Nginx 容器可以读取 (755 = rwxr-xr-x)
+    chmod -R 755 "$OLD_SITE_DIR" || echo "!!! 警告: 无法修改目录权限，若遇到 403 错误请手动执行: chmod -R 755 $OLD_SITE_DIR"
+    
+    if [ ! -f "$OLD_SITE_DIR/index.html" ]; then
+        echo "!!! 警告: 在 $OLD_SITE_DIR 下未找到 index.html"
+        echo "!!! 访问根路径可能会报 403 Forbidden"
+    fi
+else
+    echo "!!! 警告: 未找到旧业务目录: $OLD_SITE_DIR"
+fi
+
 docker run -d \
     --name $NGINX_CONTAINER \
     --network duoyu-net \
@@ -105,7 +119,7 @@ docker run -d \
     -p 80:80 \
     -p 443:443 \
     -v "$PROJECT_ROOT/nginx_full.conf":/etc/nginx/nginx.conf \
-    -v "$OLD_SITE_DIR":/usr/share/nginx/html \
+    -v "$OLD_SITE_DIR":/usr/share/nginx/html:Z \
     -v "$SSL_DIR":/etc/nginx/ssl \
     nginx:latest
 
