@@ -20,6 +20,10 @@ ENV_FILE="$BACKEND_DIR/.env"
 # 假设旧业务在: /root/project/tongzhilian/doc/.vitepress/dist
 OLD_SITE_DIR="/root/project/tongzhilian/doc/.vitepress/dist"
 
+# 修仙项目静态文件目录 (纯前端)
+# 路径: /root/project/手势识别
+XIUXIAN_DIR="/root/project/手势识别"
+
 # 证书目录 (请确认此路径正确)
 SSL_DIR="/data/nginx/ssl" 
 
@@ -112,6 +116,14 @@ else
     echo "!!! 警告: 未找到旧业务目录: $OLD_SITE_DIR"
 fi
 
+# 检查修仙项目目录
+if [ -d "$XIUXIAN_DIR" ]; then
+    echo "    正在检查修仙项目目录权限..."
+    chmod -R 755 "$XIUXIAN_DIR" || echo "!!! 警告: 无法修改权限，请手动执行: chmod -R 755 $XIUXIAN_DIR"
+else
+    echo "!!! 警告: 未找到修仙项目目录: $XIUXIAN_DIR"
+fi
+
 docker run -d \
     --name $NGINX_CONTAINER \
     --network duoyu-net \
@@ -120,6 +132,7 @@ docker run -d \
     -p 443:443 \
     -v "$PROJECT_ROOT/nginx_full.conf":/etc/nginx/nginx.conf \
     -v "$OLD_SITE_DIR":/usr/share/nginx/html:Z \
+    -v "$XIUXIAN_DIR":/usr/share/nginx/html/xiuxian:Z \
     -v "$SSL_DIR":/etc/nginx/ssl \
     nginx:latest
 
