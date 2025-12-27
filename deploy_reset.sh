@@ -146,7 +146,7 @@ if [ -d "$BLUEPRINT_DIR" ]; then
             -w /app \
             -e VITE_API_BASE_URL="/blueprint/api/v1" \
             node:20-alpine sh -c "
-                npm install --registry=https://registry.npmmirror.com && 
+                npm install && 
                 npm run build -- --base=/blueprint/
             "
         if [ $? -eq 0 ]; then
@@ -212,7 +212,7 @@ if [ -d "$FRONTEND_DIR" ]; then
         -v "$FRONTEND_DIR":/app \
         -w /app \
         node:20-alpine sh -c "
-            npm install --registry=https://registry.npmmirror.com && 
+            npm install && 
             VITE_BASE_PATH=/duoyu/ VITE_API_BASE_URL=/duoyu/api npm run build
         "
         
@@ -257,7 +257,7 @@ if [ -d "$BACKEND_DIR" ]; then
         -e TTS_CLUSTER="$TTS_CLUSTER" \
         -e TTS_SECRET_KEY="$TTS_SECRET_KEY" \
         node:20-alpine sh -c "
-            npm install --registry=https://registry.npmmirror.com && 
+            npm install && 
             npm start
         "
         
