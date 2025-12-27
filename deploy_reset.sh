@@ -24,12 +24,17 @@ OLD_SITE_DIR="/root/project/tongzhilian/doc/.vitepress/dist"
 # 路径: /root/project/手势识别
 XIUXIAN_DIR="/root/project/手势识别"
 
+# 蓝图大师项目目录 (Vue+Python)
+# 路径: /root/project/blueprint-master
+BLUEPRINT_DIR="/root/project/blueprint-master"
+
 # 证书目录 (请确认此路径正确)
 SSL_DIR="/data/nginx/ssl" 
 
 # 容器名称
 NGINX_CONTAINER="nginx"
 BACKEND_CONTAINER="duoyu-backend"
+BLUEPRINT_BACKEND="blueprint-backend"
 MONGO_CONTAINER="duoyu-mongo"
 
 echo ">>> [警告] 此脚本将清理旧的 Docker 容器！"
@@ -70,7 +75,7 @@ fi
 # ================= 1. 清理环境 =================
 echo ">>> [1/6] 清理环境..."
 # 停止并删除相关容器
-docker rm -f $NGINX_CONTAINER $BACKEND_CONTAINER $MONGO_CONTAINER >/dev/null 2>&1
+docker rm -f $NGINX_CONTAINER $BACKEND_CONTAINER $MONGO_CONTAINER $BLUEPRINT_BACKEND >/dev/null 2>&1
 # 清理网络
 docker network rm duoyu-net >/dev/null 2>&1
 
@@ -124,6 +129,54 @@ else
     echo "!!! 警告: 未找到修仙项目目录: $XIUXIAN_DIR"
 fi
 
+# ================= 3.1 构建并启动蓝图大师 (Blueprint Master) =================
+echo ">>> [3.1/6] 部署蓝图大师..."
+
+if [ -d "$BLUEPRINT_DIR" ]; then
+    # 1. 构建前端
+    if [ -d "$BLUEPRINT_DIR/frontend" ]; then
+        echo "    正在构建蓝图大师前端..."
+        cd "$BLUEPRINT_DIR/frontend"
+        rm -rf node_modules dist
+        
+        # 使用 VITE_BASE_URL 指定子路径，VITE_API_BASE_URL 指定 API 代理路径
+        docker run --rm \
+            -v "$BLUEPRINT_DIR/frontend":/app \
+            -w /app \
+            node:20-alpine sh -c "
+                npm install && 
+                npm run build -- --base=/blueprint/
+            "
+        if [ $? -eq 0 ]; then
+            echo "    蓝图大师前端构建成功"
+        else
+            echo "!!! 蓝图大师前端构建失败"
+        fi
+        cd "$PROJECT_ROOT"
+    fi
+
+    # 2. 启动后端
+    if [ -d "$BLUEPRINT_DIR/backend" ]; then
+        echo "    正在启动蓝图大师后端..."
+        # 挂载 backend 目录，自动读取其中的 .env (如果存在)
+        # 强制覆盖 MONGO_URI 以连接到 docker 网络中的 mongo
+        docker run -d \
+            --name $BLUEPRINT_BACKEND \
+            --network duoyu-net \
+            --restart unless-stopped \
+            -v "$BLUEPRINT_DIR/backend":/app \
+            -w /app \
+            -e MONGO_URI="mongodb://$MONGO_CONTAINER:27017/blueprint_master" \
+            python:3.10-slim sh -c "
+                pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple && 
+                python run_prod.py
+            "
+        echo "    蓝图大师后端已启动"
+    fi
+else
+    echo "!!! 警告: 未找到蓝图大师目录: $BLUEPRINT_DIR"
+fi
+
 docker run -d \
     --name $NGINX_CONTAINER \
     --network duoyu-net \
@@ -133,6 +186,7 @@ docker run -d \
     -v "$PROJECT_ROOT/nginx_full.conf":/etc/nginx/nginx.conf \
     -v "$OLD_SITE_DIR":/usr/share/nginx/html:Z \
     -v "$XIUXIAN_DIR":/usr/share/nginx/html/xiuxian:Z \
+    -v "$BLUEPRINT_DIR/frontend/dist":/usr/share/nginx/html/blueprint:Z \
     -v "$SSL_DIR":/etc/nginx/ssl \
     nginx:latest
 
@@ -222,4 +276,5 @@ echo "部署完成！"
 echo "旧业务 (根路径): https://tongzhilian.cn/"
 echo "新业务 (多鱼):   https://tongzhilian.cn/duoyu/"
 echo "修仙 (手势识别): https://tongzhilian.cn/xiuxian/"
+echo "蓝图大师:       https://tongzhilian.cn/blueprint/"
 echo "========================================"
