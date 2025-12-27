@@ -171,7 +171,7 @@ if [ -d "$BLUEPRINT_DIR" ]; then
             -e MONGO_URI="mongodb://$MONGO_CONTAINER:27017/blueprint_master" \
             python:3.10-slim sh -c "
                 pip install --upgrade pip &&
-                pip install -r requirements.txt && 
+                pip install -r requirements.txt --default-timeout=100 --no-cache-dir && 
                 python run_prod.py
             "
         echo "    蓝图大师后端已启动"
